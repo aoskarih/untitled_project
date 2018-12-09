@@ -91,6 +91,8 @@ class Hook(CollisionObject):
     launched = False
     
     speed = 2000
+    max_distance = 1000
+    
     velocity = np.array([0, 0])
     
     def __init__(self, player):
@@ -104,6 +106,7 @@ class Hook(CollisionObject):
     
     def launch(self, angle):
         vel_0 = self.player.velocity
+        self.pos = np.array([self.pos[0] + 64*np.cos(angle) + self.player.get_rect().width/2 - self.width/2, self.pos[1] + 64*np.sin(angle)])
         self.velocity = np.array([vel_0[0] + np.cos(angle) * self.speed, vel_0[1] + np.sin(angle) * self.speed])
         self.launched = True
     
@@ -114,6 +117,8 @@ class Hook(CollisionObject):
             self.velocity = np.array([0, 0])
             self.length = self.distance_to_player()
             self.attached = True
+        if self.distance_to_player() > self.max_distance:
+            self.reel()
     
     def distance_to_player(self):
         p1 = self.get_rect().center + self.pos
@@ -380,7 +385,7 @@ class Game():
             self.t = time.clock()
             
             self.input()
-            self.update(dt, screen)
+            self.update(dt/10, screen)
             
             pygame.display.update()
             
