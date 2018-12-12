@@ -29,8 +29,8 @@ s flamenco      22        ok        (08/2018)
 future b conan  4
 death note         
 yu yu ha        14
-gintama         270       wip
-made in abyss   11
+gintama         277       wip
+made in abyss   12
 shin sekai      25        ok        (10/2018)
 no g no l       12        ok        (09/2018)
 hellsing ult.
@@ -110,7 +110,7 @@ Cloud Atlas
 Watchmen                  ok        (10/2018)
 Maus
 Komi            171       ok        (11/2018)
-Made in abyss   32
+Made in abyss   42
 Akira
 Nausicaä
 ----
