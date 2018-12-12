@@ -5,6 +5,25 @@ import os
 
 # Imports end
 
+palette = {"black"      : (0, 0, 0),
+           "dark blue"  : (29, 43, 83),
+           "purple"     : (126, 37, 83),
+           "dark green" : (0, 135, 81),
+           "brown"      : (171, 82, 54),
+           "dark grey"  : (95, 87, 79),
+           "grey"       : (194, 195, 199),
+           "white"      : (255, 241, 232),
+           "red"        : (255, 0, 77),
+           "orange"     : (255, 163, 0),
+           "yellow"     : (255, 236, 39),
+           "green"      : (0, 228, 54),
+           "blue"       : (41, 173, 255),
+           "spale"      : (131, 118, 156),
+           "pink"       : (255, 119, 168),
+           "peach"      : (255, 204, 170)}
+
+palette_values = [v for k, v in palette.items()]
+
 # Actual code begins
 
 def load_png(name):
@@ -37,7 +56,10 @@ class GameObject(pygame.Surface):
 class CollisionObject(GameObject):
     
     # Defaul place for collision rect is in the center of surface
-    def __init__(self, width, height, x, y, collision_width, collision_height, offset_x, offset_y):
+    def __init__(self, width, height, x, y, 
+                 collision_width, collision_height, 
+                 offset_x, offset_y):
+        
         GameObject.__init__(self, width, height, x, y)
         self.collision_rect = pygame.Rect(width/2 - collision_width/2 + offset_x, 
                                           height/2 - collision_height/2 + offset_y, 
@@ -66,17 +88,21 @@ class CollisionObject(GameObject):
         obj_rect = col_obj.collision_rect.move(col_obj.pos[0], col_obj.pos[1])
         
         for i in range(precision):
-            rect_l = pygame.Rect(rect.left, rect.centery, rect.width/2, i/precision * rect.height)
-            rect_u = pygame.Rect(rect.centerx, rect.top, i/precision * rect.width, rect.height/2)
-            rect_r = pygame.Rect(rect.centerx, rect.centery, rect.width/2, i/precision * rect.height)
-            rect_d = pygame.Rect(rect.centerx, rect.centery, i/precision * rect.width, rect.height/2)
+            rect_l = pygame.Rect(rect.left, rect.centery, 
+                                 rect.width/2, i/precision * rect.height)
+            rect_u = pygame.Rect(rect.centerx, rect.top, 
+                                 i/precision * rect.width, rect.height/2)
+            rect_r = pygame.Rect(rect.centerx, rect.centery, 
+                                 rect.width/2, i/precision * rect.height)
+            rect_d = pygame.Rect(rect.centerx, rect.centery, 
+                                 i/precision * rect.width, rect.height/2)
             if rect_u.colliderect(obj_rect):
                 return 1
-            if rect_l.colliderect(obj_rect):
+            elif rect_l.colliderect(obj_rect):
                 return 3
-            if rect_d.colliderect(obj_rect):
+            elif rect_d.colliderect(obj_rect):
                 return 2
-            if rect_r.colliderect(obj_rect):
+            elif rect_r.colliderect(obj_rect):
                 return 4
         return 0
 
@@ -90,8 +116,9 @@ class Hook(CollisionObject):
     attached = False
     launched = False
     
-    speed = 2000
+    speed = 1500
     max_distance = 1000
+    min_length = 50
     
     velocity = np.array([0, 0])
     
@@ -99,14 +126,14 @@ class Hook(CollisionObject):
         CollisionObject.__init__(self, self.width, self.height, player.pos[0], player.pos[1], self.width, self.height, 0, 0)
         self.type = "hook"
         self.player = player
-        self.fill((0, 0, 200))
+        self.fill(palette["green"])
 
     def move(self, dt):
         self.pos = self.pos + dt*np.array(self.velocity)
     
     def launch(self, angle):
-        vel_0 = self.player.velocity
-        self.pos = np.array([self.pos[0] + 64*np.cos(angle) + self.player.get_rect().width/2 - self.width/2, self.pos[1] + 64*np.sin(angle)])
+        vel_0 = [0, 0] #self.player.velocity
+        self.pos = np.array([self.pos[0] + 16*np.cos(angle) + self.player.get_rect().width/2 - self.width/2, self.pos[1] + 16*np.sin(angle)])
         self.velocity = np.array([vel_0[0] + np.cos(angle) * self.speed, vel_0[1] + np.sin(angle) * self.speed])
         self.launched = True
     
@@ -118,14 +145,14 @@ class Hook(CollisionObject):
             self.length = self.distance_to_player()
             self.attached = True
         if self.distance_to_player() > self.max_distance:
-            self.reel()
+            self.release()
     
     def distance_to_player(self):
         p1 = self.get_rect().center + self.pos
         p2 = self.player.get_rect().center + self.player.pos
         return np.sqrt((p1[0]-p2[0])**2+(p1[1]-p2[1])**2)
         
-    def reel(self):
+    def release(self):
         self.attached = False
         self.launched = False
         self.pos = self.player.pos
@@ -146,7 +173,7 @@ class Player(CollisionObject):
     
     def __init__(self, width, height, x, y, collision_width, collision_height, offset_x, offset_y):
         CollisionObject.__init__(self, width, height, x, y, collision_width, collision_height, offset_x, offset_y)
-        self.fill((0, 0, 0))
+        self.fill(palette["blue"])
         self.hook = Hook(self)
         self.type = "player"
 
@@ -175,6 +202,7 @@ class Player(CollisionObject):
         self.velocity = self.velocity - (r_unit.dot(self.velocity))*r_unit
         print((r_unit.dot(self.velocity))*r_unit, r_unit)
 
+
 class Key():
     
     def __init__(self, action, key):
@@ -194,12 +222,13 @@ class Game():
     input_arr = [False for k in range(len(keys))]
     
     # constants
+    time_speed = 1/2
     g = 15
     ground_speed = 80
     air_speed = 3
     max_ground_speed = 300
     min_ground_speed = 50
-    max_fall_speed = 400
+    max_fall_speed = 1000
     ground_drag = 0.6
     ground_drag_acc = 0.2
     jump_start = 200
@@ -207,6 +236,7 @@ class Game():
     jump_time = 0.3
     hook_reel = 2
 
+    screen_size = (0, 0)
     
     t = time.clock()
     fps_limit = 60
@@ -218,7 +248,7 @@ class Game():
     
     player = Player(32, 32, 100, 200, 32, 32, 0, 0)
     ground = CollisionObject(1000, 20, 0, 600, 1000, 20, 0, 0)
-    ceiling = CollisionObject(1000, 20, 0, 0, 1000, 20, 0, 0)
+    ceiling = CollisionObject(32, 32, 0, 0, 32, 32, 0, 0)
     wall = CollisionObject(16, 1000, 1000, 0, 16, 1000, 0, 0)
     game_objects.append(ground)
     game_objects.append(wall)
@@ -227,10 +257,11 @@ class Game():
     environment.append(wall)
     environment.append(ceiling)
     
-    def __init__(self):
+    def __init__(self, screen_size=(1280, 720)):
         pygame.init()
-        pygame.display.set_mode((1280, 720))
+        pygame.display.set_mode(screen_size)
         pygame.display.set_caption("untitled_project")
+        self.screen_size = screen_size
 
     def input(self):
         
@@ -271,16 +302,18 @@ class Game():
                         self.player.velocity += np.array([0, -self.jump_long])
                 if i == 3:
                     if not self.player.hook.launched:
-                        self.player.hook.launch(-np.pi/2)
-                    if self.player.hook.attached:
+                        self.player.hook.launch(self.get_angle())
+                    if self.player.hook.attached and self.player.hook.length > self.player.hook.min_length:
                         self.player.hook.length -= self.hook_reel
                 if i == 4:
                     quit()
                 if i == 5:
-                    if self.player.hook.attached:
-                        self.player.hook.reel()
+                    if True or self.player.hook.attached:
+                        self.player.hook.release()
         
         self.interactions(dt)
+        
+        self.set_screen()
         
         for o in self.game_objects:
             screen.blit(o, o.screen_pos(self.screen_pos))
@@ -292,9 +325,12 @@ class Game():
             p1[1] += 4
             p2[0] += 16
             p2[1] += 16
-            pygame.draw.line(screen, (100, 0, 100), p1, p2, 1)
+            pygame.draw.line(screen, palette["purple"], p1, p2, 1)
             screen.blit(self.player.hook, self.player.hook.screen_pos(self.screen_pos))
         screen.blit(self.player, self.player.screen_pos(self.screen_pos))
+
+    def set_screen(self):
+        self.screen_pos = self.player.pos - np.array(self.screen_size)/2
 
 
     def interactions(self, dt):
@@ -331,6 +367,14 @@ class Game():
         self.player.grounded = False
         self.time_since_grounded += dt
         
+        # Hook physics
+        if self.player.hook.attached:
+            d = self.player.hook.distance_to_player()
+            l = self.player.hook.length
+            if d > l:
+                self.player.move_towards_point(d-l, self.player.hook.get_rect().center + self.player.hook.pos)
+                self.player.hook_velocity_change()
+                
         # Player collisions
         for o in self.game_objects:
             if o.type == "collision object":
@@ -354,17 +398,16 @@ class Game():
         
         if self.player.hook.launched and not self.player.hook.attached:
             self.player.hook.attach(self.environment)
-        
-        # Hook physics
-        if self.player.hook.attached:
-            d = self.player.hook.distance_to_player()
-            l = self.player.hook.length
-            if d > l:
-                self.player.move_towards_point(d-l, self.player.hook.get_rect().center + self.player.hook.pos)
-                self.player.hook_velocity_change()
-                
-        
-        
+            
+
+    def get_angle(self):
+        p_rect = self.player.get_rect()
+        p = np.array(self.player.screen_pos(self.screen_pos)) + [p_rect.width/2, p_rect.height/2]
+        m = np.array(pygame.mouse.get_pos())
+        x = m[0] - p[0]
+        y = m[1] - p[1]
+        return np.arctan2(y,x)
+    
     def main(self):
         
         avg_fps = []
@@ -374,7 +417,7 @@ class Game():
         screen = pygame.display.get_surface()
         
         background = pygame.Surface(screen.get_size()).convert()
-        background.fill((255,255,255))
+        background.fill(palette["white"])
         
         while 1:
             screen.blit(background, (0,0))
@@ -385,11 +428,14 @@ class Game():
             self.t = time.clock()
             
             self.input()
-            self.update(dt/10, screen)
+            self.update(dt*self.time_speed, screen)
+            
+            for i, c in enumerate(palette_values):
+                pygame.draw.rect(screen, c, pygame.Rect(i*32, 0, 32, 32))
             
             pygame.display.update()
             
-            #os.system('clear')
+            os.system('clear')
             avg_fps.append(1/dt)
             if len(avg_fps) > avg_len:
                 avg_fps = avg_fps[-avg_len:]
@@ -398,8 +444,9 @@ class Game():
             print("Player pos: " + str(np.int_(self.player.pos)))
             print("Player vel: " + str(np.int_(self.player.velocity)))
             print("Time since grounded: " + str(self.time_since_grounded))
+            print("Mouse angle: " + str(self.get_angle()))
             
-            print("")
+            print()
 
 
 if __name__ == "__main__":
