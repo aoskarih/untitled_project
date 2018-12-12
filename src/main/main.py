@@ -65,7 +65,6 @@ class CollisionObject(GameObject):
                                           height/2 - collision_height/2 + offset_y, 
                                           collision_width, 
                                           collision_height)
-        self.fill((200, 0, 0))
         self.type = "collision object"
         
     def colliding(self, col_obj):
@@ -87,24 +86,28 @@ class CollisionObject(GameObject):
         rect = self.collision_rect.move(self.pos[0], self.pos[1])
         obj_rect = col_obj.collision_rect.move(col_obj.pos[0], col_obj.pos[1])
         
-        for i in range(precision):
-            rect_l = pygame.Rect(rect.left, rect.centery, 
-                                 rect.width/2, i/precision * rect.height)
-            rect_u = pygame.Rect(rect.centerx, rect.top, 
-                                 i/precision * rect.width, rect.height/2)
-            rect_r = pygame.Rect(rect.centerx, rect.centery, 
-                                 rect.width/2, i/precision * rect.height)
-            rect_d = pygame.Rect(rect.centerx, rect.centery, 
-                                 i/precision * rect.width, rect.height/2)
-            if rect_u.colliderect(obj_rect):
-                return 1
-            elif rect_l.colliderect(obj_rect):
-                return 3
-            elif rect_d.colliderect(obj_rect):
-                return 2
-            elif rect_r.colliderect(obj_rect):
-                return 4
+        if obj_rect.collidepoint(rect.left, rect.centery):
+            return 3
+        elif obj_rect.collidepoint(rect.right, rect.centery):
+            return 4
+        else:
+            for i in range(precision):
+                rect_u = pygame.Rect(rect.centerx, rect.top, 
+                                     i/precision * rect.width, rect.height/2)
+                rect_d = pygame.Rect(rect.centerx, rect.centery, 
+                                     i/precision * rect.width, rect.height/2)
+                if rect_u.colliderect(obj_rect):
+                    return 1
+                elif rect_d.colliderect(obj_rect):
+                    return 2
         return 0
+
+
+class GroundBlock(CollisionObject):
+    
+    def __init__(self, x, y):
+        CollisionObject.__init__(self, 32, 32, x, y, 32, 32, 0, 0)
+        self.fill(palette["dark green"])
 
 
 class Hook(CollisionObject):
@@ -222,8 +225,8 @@ class Game():
     input_arr = [False for k in range(len(keys))]
     
     # constants
-    time_speed = 1/2
-    g = 15
+    time_speed = 1
+    g = 750
     ground_speed = 80
     air_speed = 3
     max_ground_speed = 300
@@ -231,10 +234,10 @@ class Game():
     max_fall_speed = 1000
     ground_drag = 0.6
     ground_drag_acc = 0.2
-    jump_start = 200
+    jump_start = 300
     jump_long = 15
     jump_time = 0.3
-    hook_reel = 2
+    hook_reel = 3
 
     screen_size = (0, 0)
     
@@ -247,15 +250,13 @@ class Game():
     environment = []
     
     player = Player(32, 32, 100, 200, 32, 32, 0, 0)
-    ground = CollisionObject(1000, 20, 0, 600, 1000, 20, 0, 0)
-    ceiling = CollisionObject(32, 32, 0, 0, 32, 32, 0, 0)
-    wall = CollisionObject(16, 1000, 1000, 0, 16, 1000, 0, 0)
-    game_objects.append(ground)
-    game_objects.append(wall)
-    game_objects.append(ceiling)
-    environment.append(ground)
-    environment.append(wall)
-    environment.append(ceiling)
+    
+    
+    for i in range(100):
+        o = GroundBlock(-500+40*i, 700)
+        game_objects.append(o)
+        environment.append(o)
+    
     
     def __init__(self, screen_size=(1280, 720)):
         pygame.init()
@@ -280,7 +281,11 @@ class Game():
     def update(self, dt, screen):
         
         # gravity
-        self.player.velocity += np.array([0, self.g])
+        
+        print(dt, self.g)
+        print(dt*self.g)
+        self.player.velocity = self.player.velocity + dt*np.array([0, self.g])
+        
         
         input = self.input_arr
         for i in range(len(input)):
@@ -366,14 +371,6 @@ class Game():
         
         self.player.grounded = False
         self.time_since_grounded += dt
-        
-        # Hook physics
-        if self.player.hook.attached:
-            d = self.player.hook.distance_to_player()
-            l = self.player.hook.length
-            if d > l:
-                self.player.move_towards_point(d-l, self.player.hook.get_rect().center + self.player.hook.pos)
-                self.player.hook_velocity_change()
                 
         # Player collisions
         for o in self.game_objects:
@@ -386,7 +383,7 @@ class Game():
                         self.player.pos[1] = o.pos[1]+o.get_height()
                     if d == 2:
                         self.player.velocity *= np.array([1, 0])
-                        self.player.pos[1] = o.pos[1]-self.player.get_height()
+                        self.player.pos[1] = o.pos[1]-self.player.get_height()+1
                         self.player.grounded = True
                         self.time_since_grounded = 0
                     if d == 3:
@@ -395,6 +392,14 @@ class Game():
                     if d == 4:
                         self.player.velocity *= np.array([0, 1])
                         self.player.pos[0] = o.pos[0]-self.player.get_width()        
+        
+        # Hook physics
+        if self.player.hook.attached:
+            d = self.player.hook.distance_to_player()
+            l = self.player.hook.length
+            if d > l:
+                self.player.move_towards_point(d-l, self.player.hook.get_rect().center + self.player.hook.pos)
+                self.player.hook_velocity_change()
         
         if self.player.hook.launched and not self.player.hook.attached:
             self.player.hook.attach(self.environment)

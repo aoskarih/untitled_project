@@ -1,6 +1,7 @@
 ----
 Huomioita merkinnöistä:
 - Animessa numero nimen perässä on viimeisin katsottu jakso.
+- Sarjan nimelle on varattu 15 merkkiä, mutta jos se ei ole tarpeeksi täytyy valitun merkki jonon olla sellainen, että googlettamalla sen löytyy haluttu sarja. Sama pätee sarja kuville ja kirjoille (kirjoilla 25 merkkiä).
 - Sarja kuvissa numero on joko viimeisin luettu "chapter" tai "volume". Saat ihan ite miettii kumpi.
 - Jos jakson numeron jälkeen on "ok" sarja on katsottu kokonaan.
 - Päivämäärä (kk/vvvv) kertoo milloin sarja saatiin katsottua tai kirja/sarjakuva luettua loppuun.
@@ -29,8 +30,8 @@ s flamenco      22        ok        (08/2018)
 future b conan  4
 death note         
 yu yu ha        14
-gintama         277       wip
-made in abyss   12
+gintama         281       wip
+made in abyss   13        ok        (12/2018)
 shin sekai      25        ok        (10/2018)
 no g no l       12        ok        (09/2018)
 hellsing ult.
@@ -110,7 +111,7 @@ Cloud Atlas
 Watchmen                  ok        (10/2018)
 Maus
 Komi            171       ok        (11/2018)
-Made in abyss   42
+Made in abyss   49        ok        (12/2018)
 Akira
 Nausicaä
 ----
