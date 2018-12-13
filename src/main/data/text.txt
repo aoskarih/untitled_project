@@ -30,7 +30,7 @@ s flamenco      22        ok        (08/2018)
 future b conan  4
 death note         
 yu yu ha        14
-gintama         281       wip
+gintama         290       wip
 made in abyss   13        ok        (12/2018)
 shin sekai      25        ok        (10/2018)
 no g no l       12        ok        (09/2018)
