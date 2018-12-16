@@ -58,7 +58,7 @@ texhnolyze
 anohana
 aria
 houseki
-kobayashi
+kobayashi       8         wip
 mushishi
 dragon pilot
 gurren lagann

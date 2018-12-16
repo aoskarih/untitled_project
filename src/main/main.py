@@ -105,9 +105,14 @@ class CollisionObject(GameObject):
 
 class GroundBlock(CollisionObject):
     
-    def __init__(self, x, y):
-        CollisionObject.__init__(self, 32, 32, x, y, 32, 32, 0, 0)
+    def __init__(self, width, height, x, y):
+        CollisionObject.__init__(self, width, height, x, y, width, height, 0, 0)
         self.fill(palette["dark green"])
+
+class SmallGroundBlock(GroundBlock):
+    
+    def __init__(self, x, y):
+        GroundBlock.__init__(self, 32, 32, x, y)
 
 
 class Hook(CollisionObject):
@@ -225,7 +230,7 @@ class Game():
     input_arr = [False for k in range(len(keys))]
     
     # constants
-    time_speed = 1
+    time_speed = 2/3
     g = 750
     ground_speed = 80
     air_speed = 3
@@ -253,7 +258,7 @@ class Game():
     
     
     for i in range(100):
-        o = GroundBlock(-500+40*i, 700)
+        o = SmallGroundBlock(-500+40*i, 700)
         game_objects.append(o)
         environment.append(o)
     
@@ -281,11 +286,7 @@ class Game():
     def update(self, dt, screen):
         
         # gravity
-        
-        print(dt, self.g)
-        print(dt*self.g)
         self.player.velocity = self.player.velocity + dt*np.array([0, self.g])
-        
         
         input = self.input_arr
         for i in range(len(input)):
