@@ -230,24 +230,24 @@ class Game():
     input_arr = [False for k in range(len(keys))]
     
     # constants
-    time_speed = 2/3
-    g = 750
-    ground_speed = 80
-    air_speed = 3
-    max_ground_speed = 300
+    time_speed = 1
+    g = 500
+    ground_speed = 200
+    air_speed = 120
+    max_ground_speed = 500
     min_ground_speed = 50
-    max_fall_speed = 1000
+    max_fall_speed = 500
     ground_drag = 0.6
     ground_drag_acc = 0.2
-    jump_start = 300
-    jump_long = 15
-    jump_time = 0.3
-    hook_reel = 3
+    jump_start = 10000
+    jump_long = 1500
+    jump_time = 0.15
+    hook_reel = 120
 
     screen_size = (0, 0)
     
     t = time.clock()
-    fps_limit = 60
+    fps_limit = 70
     time_since_grounded = 0
     
     screen_pos = [-100, -100]
@@ -256,12 +256,15 @@ class Game():
     
     player = Player(32, 32, 100, 200, 32, 32, 0, 0)
     
+    map = open("map_sample.map", "r")
     
-    for i in range(100):
-        o = SmallGroundBlock(-500+40*i, 700)
-        game_objects.append(o)
-        environment.append(o)
-    
+    for y, line in enumerate(map):
+        for x, c in enumerate(line):
+            if c == "g":
+                block = SmallGroundBlock(32*x, 32*y)
+                game_objects.append(block)
+                environment.append(block)
+
     
     def __init__(self, screen_size=(1280, 720)):
         pygame.init()
@@ -285,63 +288,41 @@ class Game():
 
     def update(self, dt, screen):
         
-        # gravity
-        self.player.velocity = self.player.velocity + dt*np.array([0, self.g])
-        
+        # Input
         input = self.input_arr
         for i in range(len(input)):
             if input[i]:
                 if i == 0:
                     if self.player.grounded:
-                        self.player.velocity += np.array([self.ground_speed, 0])
+                        self.player.velocity += np.array([self.ground_speed*dt, 0])
                     else:
-                        self.player.velocity += np.array([self.air_speed, 0])
+                        self.player.velocity += np.array([self.air_speed*dt, 0])
                 if i == 1:
                     if self.player.grounded:
-                        self.player.velocity += np.array([-self.ground_speed, 0])
+                        self.player.velocity += np.array([-self.ground_speed*dt, 0])
                     else:
-                        self.player.velocity += np.array([-self.air_speed, 0])
+                        self.player.velocity += np.array([-self.air_speed*dt, 0])
                 if i == 2:
                     if self.player.grounded:
-                        self.player.velocity += np.array([0, -self.jump_start])
-                    if self.time_since_grounded < self.jump_time:
-                        self.player.velocity += np.array([0, -self.jump_long])
+                        self.player.velocity += np.array([0, -self.jump_start*dt])
+                    elif self.time_since_grounded < self.jump_time:
+                        self.player.velocity += np.array([0, -self.jump_long*dt])
+                    self.player.grounded = False
                 if i == 3:
                     if not self.player.hook.launched:
                         self.player.hook.launch(self.get_angle())
-                    if self.player.hook.attached and self.player.hook.length > self.player.hook.min_length:
-                        self.player.hook.length -= self.hook_reel
+                    elif self.player.hook.attached and self.player.hook.length > self.player.hook.min_length:
+                        self.player.hook.length -= self.hook_reel*dt
                 if i == 4:
                     quit()
                 if i == 5:
                     if True or self.player.hook.attached:
                         self.player.hook.release()
         
-        self.interactions(dt)
-        
-        self.set_screen()
-        
-        for o in self.game_objects:
-            screen.blit(o, o.screen_pos(self.screen_pos))
-        
-        if self.player.hook.launched:
-            p1 = list(self.player.hook.screen_pos(self.screen_pos))
-            p2 = list(self.player.screen_pos(self.screen_pos))
-            p1[0] += 4
-            p1[1] += 4
-            p2[0] += 16
-            p2[1] += 16
-            pygame.draw.line(screen, palette["purple"], p1, p2, 1)
-            screen.blit(self.player.hook, self.player.hook.screen_pos(self.screen_pos))
-        screen.blit(self.player, self.player.screen_pos(self.screen_pos))
-
-    def set_screen(self):
-        self.screen_pos = self.player.pos - np.array(self.screen_size)/2
-
-
-    def interactions(self, dt):
-        
         # Player movement
+        # Gravity
+        self.player.velocity = self.player.velocity + dt*np.array([0, self.g])
+        # Drag
         if self.player.grounded:
             if self.input_arr[0]:
                 if self.player.velocity[0] > self.max_ground_speed:
@@ -367,13 +348,13 @@ class Game():
         else:
             if self.player.velocity[1] > self.max_fall_speed:
                 self.player.velocity[1] = self.max_fall_speed
-        
+        # Move it
         self.player.move(dt)
         
+        # Player collisions
         self.player.grounded = False
         self.time_since_grounded += dt
-                
-        # Player collisions
+        
         for o in self.game_objects:
             if o.type == "collision object":
                 if self.player.colliding(o):
@@ -404,7 +385,26 @@ class Game():
         
         if self.player.hook.launched and not self.player.hook.attached:
             self.player.hook.attach(self.environment)
-            
+        
+        #Updating screen
+        #Position
+        self.screen_pos = self.player.pos - np.array(self.screen_size)/2
+        
+        #Environment
+        for o in self.game_objects:
+            screen.blit(o, o.screen_pos(self.screen_pos))
+        
+        #Player
+        if self.player.hook.launched:
+            p1 = list(self.player.hook.screen_pos(self.screen_pos))
+            p2 = list(self.player.screen_pos(self.screen_pos))
+            p1[0] += 4
+            p1[1] += 4
+            p2[0] += 16
+            p2[1] += 16
+            pygame.draw.line(screen, palette["purple"], p1, p2, 1)
+            screen.blit(self.player.hook, self.player.hook.screen_pos(self.screen_pos))
+        screen.blit(self.player, self.player.screen_pos(self.screen_pos))
 
     def get_angle(self):
         p_rect = self.player.get_rect()
@@ -437,7 +437,7 @@ class Game():
             self.update(dt*self.time_speed, screen)
             
             for i, c in enumerate(palette_values):
-                pygame.draw.rect(screen, c, pygame.Rect(i*32, 0, 32, 32))
+                pygame.draw.rect(screen, c, pygame.Rect(i*32, 0, 16, 16))
             
             pygame.display.update()
             

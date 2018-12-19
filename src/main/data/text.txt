@@ -41,7 +41,10 @@ logh            86        wip
 evangelion      26        ok        (11/2018)
 zvezda
 assass class
-lain
+lain            13        ok        (12/2018)
+steins gate
+no tamago
+trigun
 samurai cham
 konosuba 1      10        ok        (10/2018)
 konosuba 2
@@ -52,17 +55,17 @@ mahoromatic
 youjo senki     13        ok        (11/2018)
 haibane renmei
 ghost s.a.c.
-haruhi
+haruhi          
 fate/zero 
 texhnolyze
 anohana
 aria
 houseki
-kobayashi       8         wip
+kobayashi       14        ok        (12/2018)
 mushishi
 dragon pilot
 gurren lagann
-nichijou        26        ok        (10/2018)        19
+nichijou        26        ok        (10/2018)        22
 top wo nerae
 flcl
 level e
