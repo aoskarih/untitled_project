@@ -109,6 +109,7 @@ class GroundBlock(CollisionObject):
         CollisionObject.__init__(self, width, height, x, y, width, height, 0, 0)
         self.fill(palette["dark green"])
 
+
 class SmallGroundBlock(GroundBlock):
     
     def __init__(self, x, y):
@@ -244,10 +245,12 @@ class Game():
     jump_time = 0.15
     hook_reel = 120
 
+    screen_alpha = 0
+    screen_color = (10, 3, 3)
     screen_size = (0, 0)
     
     t = time.clock()
-    fps_limit = 70
+    fps_limit = 60
     time_since_grounded = 0
     
     screen_pos = [-100, -100]
@@ -264,7 +267,6 @@ class Game():
                 block = SmallGroundBlock(32*x, 32*y)
                 game_objects.append(block)
                 environment.append(block)
-
     
     def __init__(self, screen_size=(1280, 720)):
         pygame.init()
@@ -405,6 +407,14 @@ class Game():
             pygame.draw.line(screen, palette["purple"], p1, p2, 1)
             screen.blit(self.player.hook, self.player.hook.screen_pos(self.screen_pos))
         screen.blit(self.player, self.player.screen_pos(self.screen_pos))
+        
+        self.screen_alpha = 255 * self.player.pos[1]/3200
+        
+        alpha_surf = pygame.Surface(self.screen_size)
+        alpha_surf.set_alpha(self.screen_alpha)
+        alpha_surf.fill(self.screen_color)
+        screen.blit(alpha_surf, (0,0))
+        
 
     def get_angle(self):
         p_rect = self.player.get_rect()
@@ -428,10 +438,13 @@ class Game():
         while 1:
             screen.blit(background, (0,0))
             
+            # Limiting fps and setting dt
+            # wip
             clock.tick(self.fps_limit)
-            
-            dt = time.clock() - self.t
-            self.t = time.clock()
+            #self.t += dt
+            #dt = time.clock() - self.t
+            #self.t = time.clock()
+            dt = 1/60
             
             self.input()
             self.update(dt*self.time_speed, screen)
@@ -447,6 +460,7 @@ class Game():
                 avg_fps = avg_fps[-avg_len:]
             print("time elapsed: " + str(int(self.t)))
             print("FPS: " + str(int(sum(avg_fps)/avg_len)))
+            print("DT: " + str(dt))
             print("Player pos: " + str(np.int_(self.player.pos)))
             print("Player vel: " + str(np.int_(self.player.velocity)))
             print("Time since grounded: " + str(self.time_since_grounded))
