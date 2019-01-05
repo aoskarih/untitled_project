@@ -408,8 +408,8 @@ class Game():
             screen.blit(self.player.hook, self.player.hook.screen_pos(self.screen_pos))
         screen.blit(self.player, self.player.screen_pos(self.screen_pos))
         
+        # Screen alpha
         self.screen_alpha = 255 * self.player.pos[1]/3200
-        
         alpha_surf = pygame.Surface(self.screen_size)
         alpha_surf.set_alpha(self.screen_alpha)
         alpha_surf.fill(self.screen_color)
