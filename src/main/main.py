@@ -237,7 +237,7 @@ class Game():
     air_speed = 120
     max_ground_speed = 500
     min_ground_speed = 50
-    max_fall_speed = 500
+    max_fall_speed = 2000
     ground_drag = 0.6
     ground_drag_acc = 0.2
     jump_start = 10000
@@ -413,7 +413,7 @@ class Game():
         alpha_surf = pygame.Surface(self.screen_size)
         alpha_surf.set_alpha(self.screen_alpha)
         alpha_surf.fill(self.screen_color)
-        screen.blit(alpha_surf, (0,0))
+        # screen.blit(alpha_surf, (0,0))
         
 
     def get_angle(self):
