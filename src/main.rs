@@ -62,7 +62,24 @@ pub struct Line {
     y2: i32
 }
 
-struct Player {
+pub struct Wall {
+    line: Line
+}
+
+pub struct Polygon {
+    lines: Vec<Line>
+}
+
+pub enum EnvObject {
+    Wall(Wall),
+    Polygon(Polygon)
+}
+
+pub struct Environment {
+    walls: Vec<EnvObject>
+}
+
+struct Agent {
     x: i32,
     y: i32,
     vx: f32,
@@ -77,6 +94,31 @@ pub struct Camera {
 }
 
 // Impl
+
+impl Agent {
+    fn move_agent_to(&mut self, x: i32, y: i32, walls: &Vec<Wall>) -> bool {
+        let coll: bool = false;
+        let movement = Line {x1: self.x, y1: self.y, x2: x, y2: y};
+
+        for wall in walls.iter() {
+            // check if movement is intersecting wall.
+        }
+        if coll {
+            // move to wall and then bounce?
+            self.x = x;
+            self.y = y;
+        } else {
+            self.x = x;
+            self.y = y;
+        }
+        self.tex.move_to(self.x, self.y);
+
+        return coll;
+    }
+    fn move_agent_amount(&mut self, dx: i32, dy: i32, walls: &Vec<Wall>) -> bool {
+        return self.move_agent_to(self.x + dx, self.y + dy, walls);
+    }
+}
 
 impl Draw for ColorSquare {
     fn draw(&self, tex: &mut [u8; (TEX_H*TEX_W*4) as usize], cam: &Camera) {
@@ -238,7 +280,7 @@ fn main() {
     };
     let mut camera = Camera {x: 0, y: 0};
     
-    let mut player = Player{
+    let mut player = Agent{
         x: 0,
         y: 0,
         vx: 0.0,
@@ -246,6 +288,8 @@ fn main() {
         speed: 0.3,
         tex: Texture::Square(player_sqr)
     };
+
+    let walls: Vec<Wall> = Vec::new();
 
     'running: loop {
         
@@ -301,10 +345,7 @@ fn main() {
 
         // Updating
 
-        player.x += (player.vx*dt as f32) as i32;
-        player.y += (player.vy*dt as f32) as i32;
-
-        player.tex.move_to(player.x, player.y);
+        player.move_agent_amount((player.vx*dt as f32) as i32, (player.vy*dt as f32) as i32, &walls);
 
         camera.x = player.x - TEX_W/2 + 15;
         camera.y = player.y - TEX_H/2 + 15;
@@ -362,4 +403,3 @@ fn p_col(x: i32, y: i32, t: i32) -> [u8; 4] {
     }
     return a;
 }
-
