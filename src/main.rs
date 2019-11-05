@@ -15,28 +15,28 @@ use rand::Rng;
 
 // // Misc
 /*
-let a = Point {x: movement.x2 - movement.x1, y: movement.y2 - movement.y1};
-'wall_check: for wall in walls.iter() {
-    let b = Point {x: wall.line.x1 - wall.line.x2, y: wall.line.y1 - wall.line.y2};
-    let c = Point {x: movement.x1 - wall.line.x1, y: movement.y1 - wall.line.y1};
-    
-    let al_nu = b.y*c.x-b.x*c.y;
-    let al_de = a.y*b.x-a.x*b.y;
-    let be_nu = c.y*a.x-c.x*a.y;
+    let a = Point {x: movement.x2 - movement.x1, y: movement.y2 - movement.y1};
+    'wall_check: for wall in walls.iter() {
+        let b = Point {x: wall.line.x1 - wall.line.x2, y: wall.line.y1 - wall.line.y2};
+        let c = Point {x: movement.x1 - wall.line.x1, y: movement.y1 - wall.line.y1};
+        
+        let al_nu = b.y*c.x-b.x*c.y;
+        let al_de = a.y*b.x-a.x*b.y;
+        let be_nu = c.y*a.x-c.x*a.y;
 
-    if al_de == 0 {
-        continue 'wall_check;
+        if al_de == 0 {
+            continue 'wall_check;
+        }
+        let al = al_nu as f32/al_de as f32;
+        if al < 0.0 || al > 1.0 {
+            continue 'wall_check;
+        }
+        let be = be_nu as f32/al_de as f32;
+        if be < 0.0 || be > 1.0 {
+            continue 'wall_check;
+        }
+        let p_col = Point {x: movement.x1 + (al*a.x as f32) as i32, y: movement.y1 + (al*a.y as f32) as i32};
     }
-    let al = al_nu as f32/al_de as f32;
-    if al < 0.0 || al > 1.0 {
-        continue 'wall_check;
-    }
-    let be = be_nu as f32/al_de as f32;
-    if be < 0.0 || be > 1.0 {
-        continue 'wall_check;
-    }
-    let p_col = Point {x: movement.x1 + (al*a.x as f32) as i32, y: movement.y1 + (al*a.y as f32) as i32};
-}
 */
 
 // // Constants
@@ -88,6 +88,7 @@ pub struct Point {
     y: i32
 }
 
+#[derive(Copy, Clone)]
 pub struct Line {
     x1: i32,
     y1: i32,
@@ -149,9 +150,21 @@ impl Agent {
     
     fn move_agent_to(&mut self, x: i32, y: i32, walls: &Vec<Wall>) -> bool {
         let mut coll: bool = false;
-        let movement = Line {x1: self.x + self.mesh.dx, y1: self.y + self.mesh.dy, x2: x + self.mesh.dx, y2: y + self.mesh.dy};
-        let l = movement.lenght();
+        let mut movement = Line {x1: self.x + self.mesh.dx, y1: self.y + self.mesh.dy, x2: x + self.mesh.dx, y2: y + self.mesh.dy};
+        let mut l = movement.lenght();
         let mut p_end = Point {x: movement.x2, y: movement.y2};
+        let mut lines: Vec<Line> = Vec::new();
+
+        for wall in walls.iter() {
+            if wall.line.on_reach(movement) {
+                lines.push(wall.line);
+            }
+        }
+
+        while l > self.mesh.r as f32 {
+            
+        }
+
         if l < self.mesh.r as f32 {
             'wall_check: for wall in walls.iter() {
                 let d = wall.line.distance_to_point(&p_end);
@@ -161,7 +174,7 @@ impl Agent {
                     let mn = movement.direction_vector();
                     if mn[0] * n[0] + mn[1] * n[1] > 0.0 {
                         n = [-n[0],-n[1]];
-                    } 
+                    }
                     p_end.x += ((self.mesh.r as f32 - d)*n[0]) as i32;
                     p_end.y += ((self.mesh.r as f32 - d)*n[1]) as i32;
                     coll = true;
@@ -245,6 +258,20 @@ impl Line {
         let x = (self.x2-self.x1) as f32 / n;
         let y = (self.y2-self.y1) as f32 / n;
         return [x, y];
+    }
+
+    fn on_reach(&self, l: Line) -> bool {
+        let v0 = [(l.x2 - l.x1) as f32, (l.y2 - l.y1) as f32];
+        let v1 = [(self.x1 - l.x1) as f32, (self.y1 - l.y1) as f32];
+        let v2 = [(self.x2 - l.x1) as f32, (self.y2 - l.y1) as f32];
+        if v0[0]*v1[0] + v0[1]*v1[1] < 0.0 && v0[0]*v2[0] + v0[1]*v2[1] < 0.0 {
+            return false;
+        }
+        let d = self.distance_to_point(&Point {x: l.x1, y: l.y1});
+        if d > l.lenght(){
+            return false;
+        }
+        return true;
     }
 
 }
@@ -516,7 +543,7 @@ fn main() {
         line: Line {
             x1: 200,
             y1: 200,
-            x2: 800,
+            x2: 200,
             y2: 1000
         },
         col: [255, 50, 250, 100]
@@ -526,7 +553,7 @@ fn main() {
         line: Line {
             x1: 200,
             y1: 200,
-            x2: 800,
+            x2: 200,
             y2: 1000
         }
     };
@@ -602,8 +629,10 @@ fn main() {
 
         player.move_agent_amount((player.vx*dt as f32) as i32, (player.vy*dt as f32) as i32, &walls);
 
-        camera.x = player.x - TEX_W/2 + 15;
-        camera.y = player.y - TEX_H/2 + 15;
+        println!("{}, {}",player.vx*dt as f32,player.vy*dt as f32);
+
+        camera.x = player.x - TEX_W/2 + player.mesh.dx;
+        camera.y = player.y - TEX_H/2 + player.mesh.dy;
 
         for i in 0..TEX_W {
             for j in 0..TEX_H {
