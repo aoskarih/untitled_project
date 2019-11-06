@@ -59,6 +59,10 @@ pub trait Move {
     fn move_to(&mut self, x: i32, y: i32);
 }
 
+pub trait Walled {
+    fn get_lines(&self) -> Vec<Line>;
+}
+
 // // "Objects"
 pub struct Square {
     x: i32,
@@ -83,6 +87,7 @@ pub enum Texture {
     Line(ColorLine)
 }
 
+#[derive(Copy, Clone)]
 pub struct Point {
     x: i32,
     y: i32
@@ -148,50 +153,61 @@ pub struct Camera {
 
 impl Agent {
     
-    fn move_agent_to(&mut self, x: i32, y: i32, walls: &Vec<Wall>) -> bool {
-        let mut coll: bool = false;
-        let mut movement = Line {x1: self.x + self.mesh.dx, y1: self.y + self.mesh.dy, x2: x + self.mesh.dx, y2: y + self.mesh.dy};
+    fn move_agent_to(&mut self, x: i32, y: i32, walls: &Vec<EnvObject>) -> bool {
+        let mut coll = false;
+        let movement = Line {x1: self.x + self.mesh.dx, y1: self.y + self.mesh.dy, x2: x + self.mesh.dx, y2: y + self.mesh.dy};
         let mut l = movement.lenght();
-        let mut p_end = Point {x: movement.x2, y: movement.y2};
+        let p_end = Point {x: movement.x2, y: movement.y2};
         let mut lines: Vec<Line> = Vec::new();
+        let mn = movement.direction_vector();
 
         for wall in walls.iter() {
-            if wall.line.on_reach(movement) {
-                lines.push(wall.line);
-            }
-        }
-
-        while l > self.mesh.r as f32 {
-            
-        }
-
-        if l < self.mesh.r as f32 {
-            'wall_check: for wall in walls.iter() {
-                let d = wall.line.distance_to_point(&p_end);
-                if d < self.mesh.r as f32 {
-                    let mut n = wall.line.normal_vector();
-                    println!("d: {}, n: {} {}", d, n[0], n[1]);
-                    let mn = movement.direction_vector();
-                    if mn[0] * n[0] + mn[1] * n[1] > 0.0 {
-                        n = [-n[0],-n[1]];
-                    }
-                    p_end.x += ((self.mesh.r as f32 - d)*n[0]) as i32;
-                    p_end.y += ((self.mesh.r as f32 - d)*n[1]) as i32;
-                    coll = true;
-                } else {
-                    continue 'wall_check;
+            for line in wall.get_lines().iter() {
+                if line.in_reach(movement) {
+                    lines.push(*line);
                 }
             }
         }
 
-        self.x = p_end.x - self.mesh.dx;
-        self.y = p_end.y - self.mesh.dy;
+        let mut part_m = Point {x: movement.x1, y: movement.y1};
+        'steps: while l > 0.0 {
+            if l > self.mesh.r as f32 {
+                part_m.x += (mn[0] * (self.mesh.r - 2) as f32) as i32;
+                part_m.y += (mn[1] * (self.mesh.r - 2) as f32) as i32;
+            } else {
+                part_m = p_end;
+            }
+
+            'wall_check: for line in lines.iter() {
+                let d = line.distance_to_point(&part_m);
+                if d < self.mesh.r as f32 {
+                    let n = line.normal_vector();
+                    let dx = (self.mesh.r as f32 - d)*n[0];
+                    let dy = (self.mesh.r as f32 - d)*n[1];
+                    
+                    if dx > 0.0 { part_m.x += (dx + 0.8) as i32; }
+                    else { part_m.x += (dx - 0.8)  as i32; }
+                    
+                    if dx > 0.0 { part_m.y += (dy + 0.8) as i32; }
+                    else { part_m.y += (dy - 0.8)  as i32; }
+
+                    coll = true;
+                    break 'steps;
+                } else {
+                    continue 'wall_check;
+                }
+            }
+            l -= self.mesh.r as f32 * 0.5;
+        }
+
+        self.x = part_m.x - self.mesh.dx;
+        self.y = part_m.y - self.mesh.dy;
         self.tex.move_to(self.x, self.y);
 
         return coll;
     }
 
-    fn move_agent_amount(&mut self, dx: i32, dy: i32, walls: &Vec<Wall>) -> bool {
+    fn move_agent_amount(&mut self, dx: i32, dy: i32, walls: &Vec<EnvObject>) -> bool {
         return self.move_agent_to(self.x + dx, self.y + dy, walls);
     }
 
@@ -209,6 +225,11 @@ impl Point {
 }
 
 impl Line {
+
+    fn swap_points(&self) -> Line {
+        return Line {x1: self.x2, y1: self.y2, x2: self.x1, y2: self.y1};
+    }
+
     fn lenght_vec(&self) -> [i32; 2] {
         return [(self.x2-self.x1).abs(), (self.y2-self.y1).abs()];
     }
@@ -243,14 +264,8 @@ impl Line {
     }
 
     fn normal_vector(&self) -> [f32; 2] {
-        if self.x1 == self.x2 {
-            return [-1.0, 0.0];
-        } else if self.y1 == self.y2 {
-            return [0.0, 1.0];
-        }
-        let k = (self.y2 - self.y1) as f32 / (self.x2 - self.x1) as f32;
-        let n = (k*k + 1.0).sqrt();
-        return [-k/n, 1.0/n];
+        let v = self.direction_vector();
+        return [v[1], -v[0]];
     }
 
     fn direction_vector(&self) -> [f32; 2] {
@@ -260,7 +275,12 @@ impl Line {
         return [x, y];
     }
 
-    fn on_reach(&self, l: Line) -> bool {
+    fn in_reach(&self, l: Line) -> bool {
+        let ld = l.direction_vector();
+        let n = self.normal_vector();
+        if ld[0]*n[0] + ld[1]*n[1] > 0.0 {
+            return false;
+        }
         let v0 = [(l.x2 - l.x1) as f32, (l.y2 - l.y1) as f32];
         let v1 = [(self.x1 - l.x1) as f32, (self.y1 - l.y1) as f32];
         let v2 = [(self.x2 - l.x1) as f32, (self.y2 - l.y1) as f32];
@@ -274,6 +294,15 @@ impl Line {
         return true;
     }
 
+}
+
+impl Wall {
+    fn get_lines(&self) -> Vec<Line> {
+        let mut v: Vec<Line> = Vec::new();
+        v.push(self.line);
+        v.push(self.line.swap_points());
+        return v;
+    }
 }
 
 impl Draw for ColorPoint {
@@ -340,14 +369,18 @@ impl Draw for ColorLine {
         if !self.on_screen(cam) {
             return;
         }
-        let lx = self.line.x2-self.line.x1;
-        let ly = self.line.y2-self.line.y1;
+        let mut line = self.line;
 
+        let lx = line.x2-line.x1;
+        let ly = line.y2-line.y1;
         if lx.abs() > ly.abs() {
+            if line.x2 < line.x1 {
+                line = line.swap_points();
+            }
             let dy = ly as f32 / lx as f32;
             for x in 0..lx {
-                let sy = (self.line.y1 as f32 + dy * x as f32) as i32 - cam.y;
-                let sx = self.line.x1 + x - cam.x;
+                let sy = (line.y1 as f32 + dy * x as f32) as i32 - cam.y;
+                let sx = line.x1 + x - cam.x;
 
                 if sx < 0 || sx + 1 > TEX_W || sy < 0 || sy + 1 > TEX_H {
                     continue;
@@ -358,10 +391,13 @@ impl Draw for ColorLine {
                 }
             }
         } else {
+            if line.y2 < line.y1 {
+                line = line.swap_points();
+            }
             let dx = lx as f32 / ly as f32;
             for y in 0..ly {
-                let sx = (self.line.x1 as f32 + dx * y as f32) as i32 - cam.x;
-                let sy = self.line.y1 + y - cam.y;
+                let sx = (line.x1 as f32 + dx * y as f32) as i32 - cam.x;
+                let sy = line.y1 + y - cam.y;
 
                 if sx < 0 || sx + 1 > TEX_W || sy < 0 || sy + 1 > TEX_H {
                     continue;
@@ -490,6 +526,19 @@ impl Move for Texture {
     }
 }
 
+impl Walled for EnvObject {
+    fn get_lines(&self) -> Vec<Line> {
+        match self {
+            EnvObject::Wall(wall) => {
+                return wall.get_lines();
+            },
+            _ => {
+                let v: Vec<Line> = Vec::new();
+                return v;
+            }
+        }
+    }
+}
 
 fn main() {
 
@@ -526,37 +575,38 @@ fn main() {
             w: 50,
             h: 20
         },
-        col: [0, 0, 0, 255]
+        col: [255, 0, 0, 255]
     };
 
-    let mut player_sqr = ColorSquare {
+    let player_sqr = ColorSquare {
         sqr: Square {
             x: 0,
             y: 0,
-            w: 30,
-            h: 30
+            w: 10,
+            h: 10
         },
         col: [255, 250, 100, 55]
     };
 
-    let c_line = ColorLine {
+    let c_line1 = ColorLine {
         line: Line {
             x1: 200,
             y1: 200,
-            x2: 200,
-            y2: 1000
+            x2: 500,
+            y2: 700
         },
         col: [255, 50, 250, 100]
     };
 
-    let test_wall = Wall {
+    let test_wall1 = Wall {
         line: Line {
             x1: 200,
             y1: 200,
-            x2: 200,
-            y2: 1000
+            x2: 500,
+            y2: 700
         }
     };
+
 
     let mut camera = Camera {x: 0, y: 0};
     
@@ -565,13 +615,23 @@ fn main() {
         y: 0,
         vx: 0.0,
         vy: 0.0,
-        speed: 0.3,
+        speed: 1.0,
         tex: Texture::Square(player_sqr),
-        mesh: Mesh {dx: 15, dy: 15, r: 15}
+        mesh: Mesh {dx: 5, dy: 5, r: 5}
     };
 
-    let mut walls: Vec<Wall> = Vec::new();
-    walls.push(test_wall);
+    let mut walls: Vec<EnvObject> = Vec::new();
+    walls.push(EnvObject::Wall(test_wall1));
+
+
+    for x in -1..2 {
+        for y in -1..2 {
+            let l = Line {x1: 0, y1: 0, x2: x, y2: y};
+            let nl = l.normal_vector();
+            println!("x:  {}, y:  {} \n nx: {}, ny: {} \n", x, y, nl[0], nl[1]);
+        }
+    }
+
 
     'running: loop {
         
@@ -629,7 +689,7 @@ fn main() {
 
         player.move_agent_amount((player.vx*dt as f32) as i32, (player.vy*dt as f32) as i32, &walls);
 
-        println!("{}, {}",player.vx*dt as f32,player.vy*dt as f32);
+        println!("{}, {}", (player.vx*dt as f32) as i32, (player.vy*dt as f32) as i32);
 
         camera.x = player.x - TEX_W/2 + player.mesh.dx;
         camera.y = player.y - TEX_H/2 + player.mesh.dy;
@@ -646,7 +706,7 @@ fn main() {
         
 
         test_sqr.draw(&mut tex_data, &camera);
-        c_line.draw(&mut tex_data, &camera);
+        c_line1.draw(&mut tex_data, &camera);
         player.tex.draw(&mut tex_data, &camera);
 
         // Rendering
