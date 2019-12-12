@@ -513,11 +513,11 @@ impl Agent {
                     let dx = (self.mesh.r as f32 - d)*n[0];
                     let dy = (self.mesh.r as f32 - d)*n[1];
                     
-                    if dx > 0.0 { part_m.x += (dx + 0.8) as i32; }
-                    else { part_m.x += (dx - 0.8)  as i32; }
+                    if dx > 0.0 { part_m.x += (dx + 1.5) as i32; }
+                    else { part_m.x += (dx - 1.5)  as i32; }
                     
-                    if dx > 0.0 { part_m.y += (dy + 0.8) as i32; }
-                    else { part_m.y += (dy - 0.8)  as i32; }
+                    if dx > 0.0 { part_m.y += (dy + 1.5) as i32; }
+                    else { part_m.y += (dy - 1.5)  as i32; }
 
                     coll = true;
                     break 'steps;
@@ -616,6 +616,7 @@ impl Line {
         if ld[0]*n[0] + ld[1]*n[1] > 0.0 {
             return false;
         }
+        /*
         let v0 = [(l.x2 - l.x1) as f32, (l.y2 - l.y1) as f32];
         let v1 = [(self.x1 - l.x1) as f32, (self.y1 - l.y1) as f32];
         let v2 = [(self.x2 - l.x1) as f32, (self.y2 - l.y1) as f32];
@@ -625,7 +626,7 @@ impl Line {
         let d = self.distance_to_point(&Point {x: l.x1, y: l.y1});
         if d > l.lenght(){
             return false;
-        }
+        }*/
         return true;
     }
 
@@ -1065,7 +1066,6 @@ fn main() {
 
         // Updating
 
-        player.move_player(dt, &walls);
 
         //println!("{}, {}", (player.vx*dt as f32) as i32, (player.vy*dt as f32) as i32);
 
@@ -1091,7 +1091,8 @@ fn main() {
                 }
             }
         }
-        println!("max val: {}", max_val);
+
+        player.move_player(dt, &walls);
 
         test_sqr.draw(&mut tex_data, &camera);
         c_line1.draw(&mut tex_data, &camera);
