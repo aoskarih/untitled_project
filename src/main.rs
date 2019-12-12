@@ -441,6 +441,19 @@ struct Agent {
     mesh: Mesh
 }
 
+pub enum State {
+    Dashing,
+    Sliding,
+    Jumping,
+    Stopping,
+    Static
+}
+
+struct Player {
+    agent: Agent,
+    states: Vec<State>
+}
+
 pub struct Camera {
     x: i32,
     y: i32,
@@ -526,6 +539,13 @@ impl Agent {
         return self.move_agent_to(self.x + dx, self.y + dy, walls);
     }
 
+}
+
+impl Player {
+    fn move_player(&mut self, dt: i64, walls: &Vec<EnvObject>) {
+
+        self.agent.move_agent_amount((self.agent.vx*dt as f32) as i32, (self.agent.vy*dt as f32) as i32, walls);
+    }
 }
 
 impl Point {
@@ -918,7 +938,7 @@ fn main() {
     // Time
     let start = PreciseTime::now();
     let mut timer = PreciseTime::now();
-    let mut dt = 0;
+    let mut dt: i64 = 0;
     let mut t = 0;
     let mut frame = 0;
 
@@ -965,23 +985,28 @@ fn main() {
 
     let mut camera = Camera {x: 0, y: 0};
     
-    let mut player = Agent{
+    let mut player_agent = Agent{
         x: 0,
         y: 0,
         vx: 0.0,
         vy: 0.0,
-        speed: 1.0,
+        speed: 0.3,
         tex: Texture::Square(player_sqr),
         mesh: Mesh {dx: 5, dy: 5, r: 5}
+    };
+
+    let mut player = Player {
+        agent: player_agent,
+        states: Vec::new()
     };
 
     let mut walls: Vec<EnvObject> = Vec::new();
     walls.push(EnvObject::Wall(test_wall1));
 
     let mut f_list: Vec<FieldFunction> = Vec::new();
-    //let tmp1 = FieldFunction::CircleWave(FunctionStart {x0: 0, y0: 0, t0: 0});
+    let tmp1 = FieldFunction::CircleWave(FunctionStart {x0: 0, y0: 0, t0: 0});
     let tmp2 = FieldFunction::PointFunc(PointStart{f_start: FunctionStart {x0: 0, y0: 0, t0: 0}, dx: 0.4 , dy: 0.4 });
-    //f_list.push(tmp1);
+    f_list.push(tmp1);
     f_list.push(tmp2);
 
     'running: loop {
@@ -993,39 +1018,41 @@ fn main() {
                 Event::KeyDown { keycode: Some(Keycode::Escape), .. } => {
                     break 'running
                 },
+                
                 // Control input
                 Event::KeyDown { keycode: Some(Keycode::A), .. } => {
-                    player.vx = -player.speed;
+                    player.agent.vx = -player.agent.speed;
                 },
                 Event::KeyUp { keycode: Some(Keycode::A), .. } => {
-                    if player.vx < 0.0 {
-                        player.vx = 0.0;
+                    if player.agent.vx < 0.0 {
+                        player.agent.vx = 0.0;
                     }
                 },
                 Event::KeyDown { keycode: Some(Keycode::D), .. } => {
-                     player.vx = player.speed;
+                     player.agent.vx = player.agent.speed;
                 },
                 Event::KeyUp { keycode: Some(Keycode::D), .. } => {
-                    if player.vx > 0.0 {
-                        player.vx = 0.0;
+                    if player.agent.vx > 0.0 {
+                        player.agent.vx = 0.0;
                     }
                 },
                 Event::KeyDown { keycode: Some(Keycode::W), .. } => {
-                    player.vy = -player.speed;
+                    player.agent.vy = -player.agent.speed;
                 },
                 Event::KeyUp { keycode: Some(Keycode::W), .. } => {
-                    if player.vy < 0.0 {
-                        player.vy = 0.0;
+                    if player.agent.vy < 0.0 {
+                        player.agent.vy = 0.0;
                     }
                 },
                 Event::KeyDown { keycode: Some(Keycode::S), .. } => {
-                    player.vy = player.speed;
+                    player.agent.vy = player.agent.speed;
                 },
                 Event::KeyUp { keycode: Some(Keycode::S), .. } => {
-                    if player.vy > 0.0 {
-                        player.vy = 0.0;
+                    if player.agent.vy > 0.0 {
+                        player.agent.vy = 0.0;
                     }
                 },
+                
                 _ => {}
             }
         }
@@ -1038,12 +1065,12 @@ fn main() {
 
         // Updating
 
-        player.move_agent_amount((player.vx*dt as f32) as i32, (player.vy*dt as f32) as i32, &walls);
+        player.move_player(dt, &walls);
 
         //println!("{}, {}", (player.vx*dt as f32) as i32, (player.vy*dt as f32) as i32);
 
-        camera.x = player.x - TEX_W/2 + player.mesh.dx;
-        camera.y = player.y - TEX_H/2 + player.mesh.dy;
+        camera.x = player.agent.x - TEX_W/2 + player.agent.mesh.dx;
+        camera.y = player.agent.y - TEX_H/2 + player.agent.mesh.dy;
         
         let mut max_val = 0.0;
         for i in 0..TEX_W {
@@ -1068,7 +1095,7 @@ fn main() {
 
         test_sqr.draw(&mut tex_data, &camera);
         c_line1.draw(&mut tex_data, &camera);
-        player.tex.draw(&mut tex_data, &camera);
+        player.agent.tex.draw(&mut tex_data, &camera);
 
         // Rendering
 
