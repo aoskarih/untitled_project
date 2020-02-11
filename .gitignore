@@ -1,2 +1,3 @@
-/target
+/opengl_rendering/target
+/sdl_rendering/target
 **/*.rs.bk

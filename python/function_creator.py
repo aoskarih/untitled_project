@@ -5,7 +5,7 @@ from scipy import special
 import time
 
 screen_size = (1280, 720)
-tex_size = (320, 180)   # 320, 180
+tex_size = (200, 300)   # 320, 180
 
 COLOR_GRAD = [
         12, 7, 135,
@@ -324,11 +324,11 @@ def z(rho, phi):
     return val
 
 def wake(x, y):
-    y -= tex_size[1]/2
+    x -= tex_size[0]/2
     x *= scale
     y *= scale
     rho = g*np.sqrt(x*x + y*y)/v**2
-    phi = np.arccos(float(x)/rho)
+    phi = np.arccos(float(y)/rho)
 
     s = 50
 #    print("rho: " + str(rho))
@@ -376,6 +376,7 @@ def main():
 
 def wake_pic():
     px = []
+    value = []
     for y in range(tex_size[1]):
         row = []
         values = []
@@ -383,15 +384,32 @@ def wake_pic():
             val = wake(x+0.5, y+0.5)
             #print(val)
             c = color_from_value(abs(val.real))
-            values.append(val)
+            values.append(abs(val.real))
             row.append(c)
         print("Row " + str(y) + " ready!")
-        #print(values)
+        value.append(values)
         px.append(row)
+    
     pixels = np.array(px, dtype=np.uint8)
     new_image = Image.fromarray(pixels)
     new_image.save("kelvin_wake.png")
 
+    array_to_sprite(value, [19, 0], "test.s")
+
+
+def array_to_sprite(array, origin, filename, swap_axis=False):
+    x0 = -origin[0]
+    f = open(filename, "w")
+    for y in range(tex_size[1]):
+        y0 = y - origin[1]
+        line = "> " + str(x0) + " " + str(y0) + " > "
+        for x in range(tex_size[0]):
+            v = array[y][x]
+            i = 4096 + int(256.0*(v/100.0))
+            line += hex(i)[-2:] + " "
+        line += "\n"
+        f.write(line)
+    
 
 if __name__ == "__main__":    
 #    pygame.init()
